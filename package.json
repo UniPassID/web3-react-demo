@@ -10,8 +10,8 @@
     "start": "npm run dev"
   },
   "dependencies": {
-    "@unipasswallet/popup-types": "0.0.13-alpha.4",
-    "@unipasswallet/web3-react": "0.0.1-beta.2",
+    "@unipasswallet/popup-types": "0.0.13-alpha.5",
+    "@unipasswallet/web3-react": "0.0.1-alpha.5",
     "@web3-react/core": "8.0.35-beta.0",
     "@web3-react/types": "8.0.20-beta.0",
     "antd": "^5.1.4",
