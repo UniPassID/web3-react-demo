@@ -1,39 +1,28 @@
-import { etherToWei, weiToEther } from "@/unipass/format_bignumber";
-import { isValidSignature } from "@/unipass/isValidSignature";
-import useUniPass from "@/unipass/useUniPass";
-import { Button, Divider, message, Input } from "antd";
 import { useEffect, useState } from "react";
+import { SiweMessage } from "siwe";
+import { Button, Divider, message, Input } from "antd";
+import useUniPass from "@/unipass/useUniPass";
+import { etherToWei, weiToEther } from "@/unipass/format_bignumber";
 import logo from "../assets/UniPass.svg";
+import { verifySiweMessage } from "@/unipass/verify_message";
 
 const { TextArea } = Input;
 
-export const getRPCByChainId = (id: number | string): string => {
-  switch (Number(id)) {
-    case 1:
-      return "https://node.wallet.unipass.id/eth-mainnet";
-    case 137:
-      return "https://node.wallet.unipass.id/polygon-mainnet";
-    case 5:
-      return "https://node.wallet.unipass.id/eth-goerli";
-    case 80001:
-    default:
-      return "https://node.wallet.unipass.id/polygon-mumbai";
-  }
-};
-
 export default function HomePage() {
-  const { provider, account, connect, connectEagerly, disconnect } =
+  const { provider, account, chainId, connect, connectEagerly, disconnect } =
     useUniPass();
-  const [balance, setBalance] = useState("--");
+
+  const [balance, setBalance] = useState("0");
   const [signature, setSignature] = useState("");
   const [typedSignature, setTypedSignature] = useState("");
+  const [siweMessage, setSiweMessage] = useState("");
+  const [siweSignature, setSiweSignature] = useState("");
   const [nativeHash, setNativeHash] = useState("");
+  const [sendNativeLoading, setSendNativeLoading] = useState(false);
 
   useEffect(() => {
     connectEagerly();
   }, []);
-
-  console.log(account);
 
   useEffect(() => {
     if (account) {
@@ -50,7 +39,11 @@ export default function HomePage() {
 
   const _disconnect = async () => {
     await disconnect();
-    setBalance("--");
+    setBalance("0");
+    setSignature("");
+    setTypedSignature("");
+    setNativeHash("");
+    setSendNativeLoading(false);
   };
 
   const signMessage = async () => {
@@ -59,23 +52,6 @@ export default function HomePage() {
       const signature = await signer.signMessage("web3-react test message");
       console.log(signature);
       setSignature(signature);
-    }
-  };
-
-  const _isValidSignature = async () => {
-    if (provider && account) {
-      const signer = provider.getSigner(account);
-      const chainId = await signer.getChainId();
-      console.log(chainId);
-      const valid = await isValidSignature(
-        "web3-react test message",
-        signature,
-        account,
-        getRPCByChainId(chainId)
-      );
-      if (valid) {
-        message.success("verify signature success");
-      }
     }
   };
 
@@ -159,10 +135,36 @@ export default function HomePage() {
     }
   };
 
+  const signWithEthereum = async () => {
+    if (provider && account) {
+      const signer = provider.getSigner(account);
+      const siweMessage = createSiweMessage(
+        account,
+        "This is a test statement."
+      );
+      const _signature = await signer.signMessage(siweMessage);
+      setSiweMessage(siweMessage);
+      setSiweSignature(_signature);
+    }
+  };
+
+  const createSiweMessage = (address: string, statement: string) => {
+    const { host, origin } = window.location;
+    const siweMessage = new SiweMessage({
+      domain: host,
+      address,
+      statement,
+      uri: origin,
+      version: "1",
+      chainId,
+    });
+    return siweMessage.prepareMessage();
+  };
+
   const getConnectionButtons = () => {
     if (account) {
       return (
-        <Button onClick={disconnect} type="dashed">
+        <Button onClick={_disconnect} type="dashed">
           Disconnect
         </Button>
       );
@@ -185,7 +187,7 @@ export default function HomePage() {
       <>
         <h4>address: {account}</h4>
         <h4>Balance: {balance}</h4>
-        {/* <h4>ChainId: {chainId || "-"}</h4> */}
+        <h4>ChainId: {chainId || "-"}</h4>
       </>
       <Divider />
       <h3>Sign Message:</h3>
@@ -199,6 +201,28 @@ export default function HomePage() {
       </Button>
       <h4>signature:</h4>
       <TextArea rows={4} value={signature} />
+
+      <Divider />
+      <h3>Sign With Ethereum:</h3>
+      <Button
+        type="primary"
+        disabled={!account}
+        onClick={signWithEthereum}
+        style={{ marginRight: "30px" }}
+      >
+        Sign With Ethereum
+      </Button>
+      <h4>siwe signature:</h4>
+      <TextArea rows={4} value={siweSignature} />
+      <Button
+        type="primary"
+        disabled={!siweSignature}
+        onClick={() => verifySiweMessage(siweMessage, siweSignature, provider!)}
+        style={{ marginRight: "30px", marginTop: "20px" }}
+      >
+        Verify Signature
+      </Button>
+
       <Divider />
       <Button type="primary" onClick={signTypedData} disabled={!account}>
         Sign Typed Data(EIP-712)
@@ -207,7 +231,12 @@ export default function HomePage() {
       <TextArea rows={4} value={typedSignature} />
       <Divider />
       <h3>Send Transaction:</h3>
-      <Button onClick={sendTransaction} type="primary" disabled={!account}>
+      <Button
+        onClick={sendTransaction}
+        type="primary"
+        disabled={!account}
+        loading={sendNativeLoading}
+      >
         Send native Token
       </Button>
       <h4>native tx hash:</h4>

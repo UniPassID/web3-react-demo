@@ -16,6 +16,7 @@
     "@web3-react/types": "8.0.20-beta.0",
     "antd": "^5.1.4",
     "ethers": "^5.7.2",
+    "siwe": "^1.1.6",
     "umi": "^4.0.42"
   },
   "devDependencies": {

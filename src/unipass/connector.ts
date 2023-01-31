@@ -7,7 +7,7 @@ export const [uniPassWallet, hooks] = initializeConnector<UniPass>(
     new UniPass({
       actions,
       options: {
-        chainId: 5,
+        chainId: 80001,
         returnEmail: true,
         appSettings: {
           appName: "web3-react test for unipass",
