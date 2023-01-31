@@ -115,6 +115,7 @@ export default function HomePage() {
 
   const sendTransaction = async () => {
     if (provider) {
+      setSendNativeLoading(true);
       const signer = provider.getSigner(account);
       const txParams = {
         from: account,
@@ -131,6 +132,8 @@ export default function HomePage() {
         message.error(
           `send transaction error: ${e?.message || "unknown error"}`
         );
+      } finally {
+        setSendNativeLoading(false);
       }
     }
   };
